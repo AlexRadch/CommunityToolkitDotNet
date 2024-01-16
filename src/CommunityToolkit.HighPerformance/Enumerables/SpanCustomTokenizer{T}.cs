@@ -9,7 +9,9 @@ using System.Runtime.CompilerServices;
 
 namespace CommunityToolkit.HighPerformance.Enumerables;
 
+#if NETSTANDARD2_1_OR_GREATER
 #pragma warning disable IDE0057 // Use range operator
+#endif
 
 /// <summary>
 /// Looks for the next token in the source.
@@ -22,7 +24,7 @@ namespace CommunityToolkit.HighPerformance.Enumerables;
 /// If the search goes forward, then the starting index should be &lt; ending index.
 /// If the search goes reverse, then the starting index should be > ending index.
 /// </returns>
-public delegate (int startIndex, int endIndex) SpanGetNextTokenFunc<T>(Span<T> source);
+public delegate (int startIndex, int endIndex) SpanGetNextTokenFunc<T>(ReadOnlySpan<T> source);
 
 /// <summary>
 /// Trim token.
@@ -32,7 +34,7 @@ public delegate (int startIndex, int endIndex) SpanGetNextTokenFunc<T>(Span<T> s
 /// <returns>
 /// A tuple containing the starting and exclusive ending indexes of trimmed token.
 /// </returns>
-public delegate (int startIndex, int endIndex) SpanTrimFunc<T>(Span<T> token);
+public delegate (int startIndex, int endIndex) SpanTrimFunc<T>(ReadOnlySpan<T> token);
 
 /// <summary>
 /// Span tokenizer that use <see cref="SpanGetNextTokenFunc{T}"/> delegate to get all tokens in a source span.
@@ -43,7 +45,7 @@ public ref struct SpanCustomTokenizer<T>
     where T : IEquatable<T>
 {
     // The current source Span[T] instance.
-    private Span<T> source;
+    private ReadOnlySpan<T> source;
 
     // Offset of the current source relative to the original
     private int sourceOffset;
@@ -73,6 +75,24 @@ public ref struct SpanCustomTokenizer<T>
     /// <param name="skipEmpty">The flag to skip empty tokens.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public SpanCustomTokenizer(Span<T> source, SpanGetNextTokenFunc<T> getNextTokenFunc, 
+        SpanTrimFunc<T>? trimFunc = null, bool skipEmpty = false)
+    {
+        this.source = source;
+        this.sourceOffset = 0;
+        this.range = default;
+        this.getNextTokenFunc = getNextTokenFunc;
+        this.trimFunc = trimFunc;
+        this.skipEmpty = skipEmpty;
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SpanCustomTokenizer{T}"/> struct.
+    /// </summary>
+    /// <param name="source">The source <see cref="ReadOnlySpan{T}"/> instance.</param>
+    /// <param name="getNextTokenFunc">The <see cref="SpanGetNextTokenFunc{T}"/> delegate to get next token in the <paramref name="source"/>.</param>
+    /// <param name="trimFunc">The <see cref="SpanTrimFunc{T}"/>  delegate to trim current token.</param>
+    /// <param name="skipEmpty">The flag to skip empty tokens.</param>
+    public SpanCustomTokenizer(ReadOnlySpan<T> source, SpanGetNextTokenFunc<T> getNextTokenFunc,
         SpanTrimFunc<T>? trimFunc = null, bool skipEmpty = false)
     {
         this.source = source;

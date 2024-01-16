@@ -9,7 +9,9 @@ using System.Runtime.CompilerServices;
 
 namespace CommunityToolkit.HighPerformance.Enumerables;
 
+#if NETSTANDARD2_1_OR_GREATER
 #pragma warning disable IDE0057 // Use range operator
+#endif
 
 /// <summary>
 /// A <see langword="ref"/> <see langword="struct"/> that tokenizes a given <see cref="Span{T}"/> instance.
