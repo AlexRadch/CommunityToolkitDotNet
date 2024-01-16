@@ -37,10 +37,12 @@ public ref struct SpanCustomTokenizer<T>
     // Offset of the current source relative to the original
     private int sourceOffset;
 
-    /// <summary>
-    /// Range of the current token in the source.
-    /// </summary>
+    // Range of the current token in the source.
+#if NETSTANDARD2_1_OR_GREATER
     private Range range;
+#else
+    private (int Start, int End) range;
+#endif
 
     /// <summary>
     /// The <see cref="GetNextTokenIndexesFunc{T}"/> delegate to get next token in the source.
@@ -84,9 +86,15 @@ public ref struct SpanCustomTokenizer<T>
         int len = endIndex - startIndex;
         if (len > 0)
         {
+#if NETSTANDARD2_1_OR_GREATER
             this.range = new Range(
                 new Index(startIndex + this.sourceOffset),
                 new Index(endIndex + this.sourceOffset));
+#else
+            this.range = (
+                startIndex + this.sourceOffset,
+                endIndex + this.sourceOffset);
+#endif
             this.source = this.source.Slice(endIndex);
             this.sourceOffset += endIndex;
 
@@ -94,9 +102,15 @@ public ref struct SpanCustomTokenizer<T>
         }
         else if (len > 0)
         {
+#if NETSTANDARD2_1_OR_GREATER
             this.range = new Range(
                 new Index(endIndex + this.sourceOffset + 1),
                 new Index(startIndex + this.sourceOffset + 1));
+#else
+            this.range = (
+                endIndex + this.sourceOffset + 1,
+                startIndex + this.sourceOffset + 1);
+#endif
             this.source = this.source.Slice(0, endIndex);
 
             return true; 
@@ -108,7 +122,11 @@ public ref struct SpanCustomTokenizer<T>
     /// <summary>
     /// Gets the duck-typed <see cref="IEnumerator{T}.Current"/> property.
     /// </summary>
+#if NETSTANDARD2_1_OR_GREATER
     public readonly Range Current
+#else
+    public readonly (int Start, int End) Current
+#endif
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => this.range;
