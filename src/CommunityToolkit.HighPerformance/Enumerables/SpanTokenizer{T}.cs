@@ -9,6 +9,8 @@ using System.Runtime.CompilerServices;
 
 namespace CommunityToolkit.HighPerformance.Enumerables;
 
+#pragma warning disable IDE0057 // Use range operator
+
 /// <summary>
 /// A <see langword="ref"/> <see langword="struct"/> that tokenizes a given <see cref="Span{T}"/> instance.
 /// </summary>
