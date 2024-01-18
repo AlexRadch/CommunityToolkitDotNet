@@ -3,8 +3,11 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
-using System.Buffers;
 using System.Runtime.CompilerServices;
+
+#if NET8_0_OR_GREATER
+using System.Buffers;
+#endif
 
 namespace CommunityToolkit.HighPerformance.Enumerables;
 
@@ -13,32 +16,40 @@ namespace CommunityToolkit.HighPerformance.Enumerables;
 #pragma warning disable IDE0057 // Use range operator
 #endif
 
+/// <summary>
+/// Helper class for <see cref="SpanCustomTokenizer{T}"/> structure.
+/// </summary>
 public static class SpanCustomTokenizer
 {
     /// <summary>
     /// Looks for the next token in the source.
     /// </summary>
     /// <typeparam name="T">The type of elements in <paramref name="source"/>.</typeparam>
-    /// <param name="source">The source <see cref="Span{T}"/> instance.</param>
+    /// <param name="source">The source <see cref="ReadOnlySpan{T}"/> instance.</param>
     /// <returns>
-    /// A tuple containing the starting and exclusive ending indexes of the next token.
-    /// If the token is not found then the starting index ending index should be equal to starting index.
-    /// If the search goes forward, then the starting index should be &lt; ending index.
-    /// If the search goes reverse, then the starting index should be > ending index.
+    /// A tuple containing (A Range for the founded token, Range for untokenized part of source).
     /// </returns>
-    public delegate ((int Start, int End) Token, (int Start, int End) NextSource) TokenizeFunc<T>(ReadOnlySpan<T> source);
+    public delegate ((int Start, int End) Token, (int Start, int End) Untokenized) TokenizeFunc<T>(ReadOnlySpan<T> source);
 
     /// <summary>
     /// Trim token.
     /// </summary>
     /// <typeparam name="T">The type of elements in <paramref name="token"/>.</typeparam>
     /// <param name="token">The <see cref="Span{T}"/> with token to trim.</param>
-    /// <returns>
-    /// A tuple containing the starting and exclusive ending indexes of trimmed token.
-    /// </returns>
+    /// <returns>A tuple containing the starting and exclusive ending indexes of trimmed token.</returns>
     public delegate (int Start, int End) TrimFunc<T>(ReadOnlySpan<T> token);
 
-    public static (TokenizeFunc<T> tokenizeFunc, TrimFunc<T>? trimFunc) 
+    /// <summary>
+    /// Creates functions necessary to make the <see cref="SpanCustomTokenizer{T}"/> work with the specified parameters.
+    /// </summary>
+    /// <typeparam name="T">The type of elements in the <see cref="ReadOnlySpan{T}"/> source.</typeparam>
+    /// <param name="options">Specifies whether to remove empty tokens and trim tokens.</param>
+    /// <param name="separator">An array of delimiting items.</param>
+    /// <returns>
+    /// Tuple with (<see cref="TokenizeFunc{T}"/>, <see cref="TrimFunc{T}"/>?) functions necessary 
+    /// to make the <see cref="SpanCustomTokenizer{T}"/>  work with the specified parameters.
+    /// </returns>
+    public static (TokenizeFunc<T> tokenizeFunc, TrimFunc<T>? trimFunc)
         CreateTokenizationFunctions<T>(StringSplitOptions options, params T[] separator)
             where T : IEquatable<T>
     {
@@ -47,7 +58,14 @@ public static class SpanCustomTokenizer
 
     #region NextTokenFunc
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    /// <summary>
+    /// Creates a <see cref="TokenizeFunc{T}"/> function necessary to make the <see cref="SpanCustomTokenizer{T}"/> work with the specified parameters.
+    /// </summary>
+    /// <typeparam name="T">The type of elements in the <see cref="ReadOnlySpan{T}"/> source.</typeparam>
+    /// <param name="options">Specifies whether to remove empty tokens and trim tokens.</param>
+    /// <param name="separator">An array of delimiting items.</param>
+    /// <returns>A <see cref="TokenizeFunc{T}"/> function necessary to make the <see cref="SpanCustomTokenizer{T}"/> work with the specified parameters.</returns>
+    /// <exception cref="NotImplementedException">When the required function is not yet implemented.</exception>
     public static TokenizeFunc<T> CreateTokenizeFunc<T>(StringSplitOptions options, params T[] separator)
         where T : IEquatable<T>
     {
@@ -97,8 +115,17 @@ public static class SpanCustomTokenizer
 
 #if NET8_0_OR_GREATER
 
+    /// <summary>
+    /// Looks for the next token in the source.
+    /// </summary>
+    /// <typeparam name="T">The type of elements in <paramref name="source"/>.</typeparam>
+    /// <param name="source">The source <see cref="ReadOnlySpan{T}"/> instance.</param>
+    /// <param name="separator">A <see cref="SearchValues{T}"/> of delimiting items.</param>
+    /// <returns>
+    /// A tuple containing (A Range for the founded token, Range for untokenized part of source).
+    /// </returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ((int Start, int End) Token, (int Start, int End) NextSource) 
+    public static ((int Start, int End) Token, (int Start, int End) Untokenized) 
         TokenizeForwardSkipEmpty<T>(ReadOnlySpan<T> source, SearchValues<T> separator)
             where T : IEquatable<T>
     {
@@ -118,8 +145,17 @@ public static class SpanCustomTokenizer
         return ((start, start + end), (start + end + 1, source.Length));
     }
 
+    /// <summary>
+    /// Looks for the next token in the source.
+    /// </summary>
+    /// <typeparam name="T">The type of elements in <paramref name="source"/>.</typeparam>
+    /// <param name="source">The source <see cref="ReadOnlySpan{T}"/> instance.</param>
+    /// <param name="separator">A <see cref="SearchValues{T}"/> of delimiting items.</param>
+    /// <returns>
+    /// A tuple containing (A Range for the founded token, Range for untokenized part of source).
+    /// </returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ((int Start, int End) Token, (int Start, int End) NextSource)
+    public static ((int Start, int End) Token, (int Start, int End) Untokenized)
         TokenizeForwardNotSkipEmpty<T>(ReadOnlySpan<T> source, SearchValues<T> separator)
             where T : IEquatable<T>
     {
@@ -138,7 +174,13 @@ public static class SpanCustomTokenizer
 
     #region TrimFunct
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    /// <summary>
+    /// Creates a <see cref="TrimFunc{T}"/> function necessary to make the <see cref="SpanCustomTokenizer{T}"/> to trim tokens.
+    /// </summary>
+    /// <typeparam name="T">The type of elements in the <see cref="ReadOnlySpan{T}"/> source.</typeparam>
+    /// <param name="options">Specifies whether to remove empty tokens and trim tokens.</param>
+    /// <returns>A <see cref="TrimFunc{T}"/> function necessary to make the <see cref="SpanCustomTokenizer{T}"/> to trim tokens.</returns>
+    /// <exception cref="NotImplementedException">When the required function is not yet implemented.</exception>
     public static TrimFunc<T>? CreateTrimFunc<T>(StringSplitOptions options)
     {
 #if NET5_0_OR_GREATER
@@ -153,7 +195,8 @@ public static class SpanCustomTokenizer
             return Unsafe.As<TrimFunc<char>, TrimFunc<T>>(ref func);
         }
 #endif
-        return null;
+
+        throw new NotImplementedException();
     }
 
     /// <summary>

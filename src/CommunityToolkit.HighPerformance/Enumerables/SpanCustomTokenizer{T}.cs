@@ -13,6 +13,10 @@ namespace CommunityToolkit.HighPerformance.Enumerables;
 #pragma warning disable IDE0057 // Use range operator
 #endif
 
+#if NET8_0_OR_GREATER
+#pragma warning disable IDE0003 // Remove qualification
+#endif
+
 /// <summary>
 /// <see langword="ref"/> <see langword="struct"/> that tokenizes a given <see cref="Span{T}"/> or <see cref="ReadOnlySpan{T}"/> source.
 /// It should be used directly within a <see langword="foreach"/> loop.
@@ -20,7 +24,7 @@ namespace CommunityToolkit.HighPerformance.Enumerables;
 /// It use <see cref="SpanCustomTokenizer.TrimFunc{T}"/> delegate to trim tokens.
 /// It satisfies to <see href="https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/statements/iteration-statements#the-foreach-statement">foreach statement pattern</see>.
 /// </summary>
-/// <typeparam name="T">The type of elements in the span.</typeparam>
+/// <typeparam name="T">The type of elements in the <see cref="ReadOnlySpan{T}"/> source.</typeparam>
 /// <remarks>
 /// Initializes a new instance of the <see cref="SpanCustomTokenizer{T}"/> struct.
 /// </remarks>
@@ -35,7 +39,7 @@ public ref struct SpanCustomTokenizer<T>(ReadOnlySpan<T> source, SpanCustomToken
     /// <summary>
     /// Not yet tokenized part of a source.
     /// </summary>
-    public ReadOnlySpan<T> UntokenizedSourcePart
+    public ReadOnlySpan<T> UntokenizedSource
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get;
@@ -78,25 +82,25 @@ public ref struct SpanCustomTokenizer<T>(ReadOnlySpan<T> source, SpanCustomToken
     public bool MoveNext()
     {
         SkipEmpty:
-        if (this.UntokenizedSourcePart.Length <= 0)
+        if (this.UntokenizedSource.Length <= 0)
         {
             return false;
         }
 
-        ((int Start, int End) token, (int Start, int End) nextSource) = this.tokenizeFunc(this.UntokenizedSourcePart);
-        Debug.Assert(token.Start >= 0 && token.Start <= this.UntokenizedSourcePart.Length,
-                $"SpanCustomTokenizer.TokenizeFunc return Token.Start {token.Start} out of range [0, {this.UntokenizedSourcePart.Length}]");
-        Debug.Assert(token.End >= token.Start && token.End <= this.UntokenizedSourcePart.Length,
-                $"SpanCustomTokenizer.TokenizeFunc return Token.End {token.End} out of range [{token.Start}, {this.UntokenizedSourcePart.Length}]");
-        Debug.Assert(nextSource.Start >= 0 && nextSource.Start <= this.UntokenizedSourcePart.Length,
-                $"SpanCustomTokenizer.TokenizeFunc return NextSource.Start {nextSource.Start} out of range [0, {this.UntokenizedSourcePart.Length}]");
-        Debug.Assert(nextSource.End >= nextSource.Start && nextSource.End <= this.UntokenizedSourcePart.Length,
-                $"SpanCustomTokenizer.TokenizeFunc return NextSource.End {nextSource.End} out of range [{nextSource.Start}, {this.UntokenizedSourcePart.Length}]");
+        ((int Start, int End) token, (int Start, int End) untokenized) = this.tokenizeFunc(this.UntokenizedSource);
+        Debug.Assert(token.Start >= 0 && token.Start <= this.UntokenizedSource.Length,
+                $"SpanCustomTokenizer.TokenizeFunc return Token.Start {token.Start} out of range [0, {this.UntokenizedSource.Length}]");
+        Debug.Assert(token.End >= token.Start && token.End <= this.UntokenizedSource.Length,
+                $"SpanCustomTokenizer.TokenizeFunc return Token.End {token.End} out of range [{token.Start}, {this.UntokenizedSource.Length}]");
+        Debug.Assert(untokenized.Start >= 0 && untokenized.Start <= this.UntokenizedSource.Length,
+                $"SpanCustomTokenizer.TokenizeFunc return Untokenized.Start {untokenized.Start} out of range [0, {this.UntokenizedSource.Length}]");
+        Debug.Assert(untokenized.End >= untokenized.Start && untokenized.End <= this.UntokenizedSource.Length,
+                $"SpanCustomTokenizer.TokenizeFunc return Untokenized.End {untokenized.End} out of range [{untokenized.Start}, {this.UntokenizedSource.Length}]");
 
         int tokenLen = token.End - token.Start;
         if (tokenLen > 0 && this.trimFunc is not null)
         {
-            (token.Start, token.End) = this.trimFunc(this.UntokenizedSourcePart.Slice(token.Start, tokenLen));
+            (token.Start, token.End) = this.trimFunc(this.UntokenizedSource.Slice(token.Start, tokenLen));
             Debug.Assert(token.Start >= 0 && token.Start <= tokenLen,
                 $"SpanCustomTokenizer.TrimFunc return Start {token.Start} out of range [0, {tokenLen}].");
             Debug.Assert(token.End >= token.Start && token.End <= tokenLen,
@@ -106,8 +110,8 @@ public ref struct SpanCustomTokenizer<T>(ReadOnlySpan<T> source, SpanCustomToken
 
         if (tokenLen <= 0 && this.skipEmpty)
         {
-            this.UntokenizedSourcePart = this.UntokenizedSourcePart.Slice(nextSource.Start, nextSource.End - nextSource.Start);
-            this.sourceOffset += nextSource.Start;
+            this.UntokenizedSource = this.UntokenizedSource.Slice(untokenized.Start, untokenized.End - untokenized.Start);
+            this.sourceOffset += untokenized.Start;
             goto SkipEmpty;
         }
 
@@ -116,8 +120,8 @@ public ref struct SpanCustomTokenizer<T>(ReadOnlySpan<T> source, SpanCustomToken
 #else
         this.tokenRange = (token.Start + this.sourceOffset, token.End + this.sourceOffset);
 #endif
-        this.UntokenizedSourcePart = this.UntokenizedSourcePart.Slice(nextSource.Start, nextSource.End - nextSource.Start);
-        this.sourceOffset += nextSource.Start;
+        this.UntokenizedSource = this.UntokenizedSource.Slice(untokenized.Start, untokenized.End - untokenized.Start);
+        this.sourceOffset += untokenized.Start;
         return true;
     }
 
