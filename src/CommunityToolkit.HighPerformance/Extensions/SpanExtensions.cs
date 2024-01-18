@@ -246,13 +246,13 @@ public static class SpanExtensions
     /// <typeparam name="T">The type of items in the <see cref="Span{T}"/> to tokenize.</typeparam>
     /// 
     /// <param name="source">The source <see cref="Span{T}"/> to tokenize.</param>
-    /// <param name="separator">An array of delimiting <typeparamref name="T"/> items.
+    /// <param name="separator">An array of delimiting <typeparamref name="T"/> items.</param>
     /// <returns>A wrapper type that will handle the tokenization for <paramref name="source"/>.</returns>
     /// <remarks>The returned <see cref="SpanCustomTokenizer{T}"/> value shouldn't be used directly: use this extension in a <see langword="foreach"/> loop.</remarks>
     public static SpanCustomTokenizer<T> Tokenize<T>(this ReadOnlySpan<T> source, StringSplitOptions options, params T[] separator)
             where T : IEquatable<T>
     {
-        (SpanCustomTokenizer.TokenizeFunc<T> tokenizeFunc, SpanCustomTokenizer.TrimFunc<T>? trimFunc) = SpanCustomTokenizer.CreateTokenizationFuncs(options, separator);
+        (SpanCustomTokenizer.TokenizeFunc<T> tokenizeFunc, SpanCustomTokenizer.TrimFunc<T>? trimFunc) = SpanCustomTokenizer.CreateTokenizationFunctions(options, separator);
         return new SpanCustomTokenizer<T>(source, tokenizeFunc, trimFunc, options.HasFlag(StringSplitOptions.RemoveEmptyEntries));
     }
 

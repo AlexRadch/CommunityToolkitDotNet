@@ -9,7 +9,9 @@ using System.Runtime.CompilerServices;
 namespace CommunityToolkit.HighPerformance.Enumerables;
 
 //#pragma warning disable IDE0056 // Use index operator
+#if NETSTANDARD2_1_OR_GREATER
 #pragma warning disable IDE0057 // Use range operator
+#endif
 
 public static class SpanCustomTokenizer
 {
@@ -37,7 +39,7 @@ public static class SpanCustomTokenizer
     public delegate (int Start, int End) TrimFunc<T>(ReadOnlySpan<T> token);
 
     public static (TokenizeFunc<T> tokenizeFunc, TrimFunc<T>? trimFunc) 
-        CreateTokenizationFuncs<T>(StringSplitOptions options, params T[] separator)
+        CreateTokenizationFunctions<T>(StringSplitOptions options, params T[] separator)
             where T : IEquatable<T>
     {
         return (CreateTokenizeFunc(options, separator), CreateTrimFunc<T>(options));
@@ -53,37 +55,47 @@ public static class SpanCustomTokenizer
         {
             if (typeof(T) == typeof(char) || typeof(T) == typeof(short) || typeof(T) == typeof(ushort))
             {
+#if NET8_0_OR_GREATER
                 SearchValues<char> searchValues = SearchValues.Create(Unsafe.As<T[], char[]>(ref separator));
                 TokenizeFunc<char> func = (ReadOnlySpan<char> source) => TokenizeForwardSkipEmpty(source, searchValues);
                 return Unsafe.As<TokenizeFunc<char>, TokenizeFunc<T>>(ref func);
+#endif
             }
 
             if (typeof(T) == typeof(byte) || typeof(T) == typeof(sbyte))
             {
+#if NET8_0_OR_GREATER
                 SearchValues<byte> searchValues = SearchValues.Create(Unsafe.As<T[], byte[]>(ref separator));
                 TokenizeFunc<byte> func = (ReadOnlySpan<byte> source) => TokenizeForwardSkipEmpty(source, searchValues);
                 return Unsafe.As<TokenizeFunc<byte>, TokenizeFunc<T>>(ref func);
+#endif
             }
         }
         else
         {
             if (typeof(T) == typeof(char) || typeof(T) == typeof(short) || typeof(T) == typeof(ushort))
             {
+#if NET8_0_OR_GREATER
                 SearchValues<char> searchValues = SearchValues.Create(Unsafe.As<T[], char[]>(ref separator));
                 TokenizeFunc<char> func = (ReadOnlySpan<char> source) => TokenizeForwardNotSkipEmpty(source, searchValues);
                 return Unsafe.As<TokenizeFunc<char>, TokenizeFunc<T>>(ref func);
+#endif
             }
 
             if (typeof(T) == typeof(byte) || typeof(T) == typeof(sbyte))
             {
+#if NET8_0_OR_GREATER
                 SearchValues<byte> searchValues = SearchValues.Create(Unsafe.As<T[], byte[]>(ref separator));
                 TokenizeFunc<byte> func = (ReadOnlySpan<byte> source) => TokenizeForwardNotSkipEmpty(source, searchValues);
                 return Unsafe.As<TokenizeFunc<byte>, TokenizeFunc<T>>(ref func);
+#endif
             }
         }
 
         throw new NotImplementedException();
     }
+
+#if NET8_0_OR_GREATER
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ((int Start, int End) Token, (int Start, int End) NextSource) 
@@ -120,6 +132,8 @@ public static class SpanCustomTokenizer
         return ((0, index), (index + 1, source.Length));
     }
 
+#endif
+
     #endregion
 
     #region TrimFunct
@@ -127,6 +141,7 @@ public static class SpanCustomTokenizer
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static TrimFunc<T>? CreateTrimFunc<T>(StringSplitOptions options)
     {
+#if NET5_0_OR_GREATER
         if (!options.HasFlag(StringSplitOptions.TrimEntries))
         {
             return null;
@@ -137,7 +152,7 @@ public static class SpanCustomTokenizer
             TrimFunc<char> func = Trim;
             return Unsafe.As<TrimFunc<char>, TrimFunc<T>>(ref func);
         }
-
+#endif
         return null;
     }
 
@@ -168,5 +183,5 @@ public static class SpanCustomTokenizer
     //    return (start, end);
     //}
 
-    #endregion
+#endregion
 }

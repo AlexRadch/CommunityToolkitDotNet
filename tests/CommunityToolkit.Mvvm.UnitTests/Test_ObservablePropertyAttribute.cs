@@ -1049,8 +1049,8 @@ public partial class Test_ObservablePropertyAttribute
         List<string> changingArgs = new();
         List<string> changedArgs = new();
 
-        model.PropertyChanging += (s, e) => changingArgs.Add(e.PropertyName);
-        model.PropertyChanged += (s, e) => changedArgs.Add(e.PropertyName);
+        model.PropertyChanging += (s, e) => changingArgs.Add(e.PropertyName!);
+        model.PropertyChanged += (s, e) => changedArgs.Add(e.PropertyName!);
 
         model.Name = "Bob";
 
@@ -1066,7 +1066,7 @@ public partial class Test_ObservablePropertyAttribute
 
         List<string> changedArgs = new();
 
-        model.PropertyChanged += (s, e) => changedArgs.Add(e.PropertyName);
+        model.PropertyChanged += (s, e) => changedArgs.Add(e.PropertyName!);
 
         model.Name = "Alice";
 
