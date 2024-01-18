@@ -14,99 +14,59 @@ namespace CommunityToolkit.HighPerformance.Enumerables;
 #endif
 
 /// <summary>
-/// Looks for the next token in the source.
-/// </summary>
-/// <typeparam name="T">The type of elements in <paramref name="source"/>.</typeparam>
-/// <param name="source">The source <see cref="Span{T}"/> instance.</param>
-/// <returns>
-/// A tuple containing the starting and exclusive ending indexes of the next token.
-/// If the token is not found then the starting index ending index should be equal to starting index.
-/// If the search goes forward, then the starting index should be &lt; ending index.
-/// If the search goes reverse, then the starting index should be > ending index.
-/// </returns>
-public delegate (int startIndex, int endIndex) SpanGetNextTokenFunc<T>(ReadOnlySpan<T> source);
-
-/// <summary>
-/// Trim token.
-/// </summary>
-/// <typeparam name="T">The type of elements in <paramref name="token"/>.</typeparam>
-/// <param name="token">The <see cref="Span{T}"/> with token to trim.</param>
-/// <returns>
-/// A tuple containing the starting and exclusive ending indexes of trimmed token.
-/// </returns>
-public delegate (int startIndex, int endIndex) SpanTrimFunc<T>(ReadOnlySpan<T> token);
-
-/// <summary>
-/// Span tokenizer that use <see cref="SpanGetNextTokenFunc{T}"/> delegate to get all tokens in a source span.
-/// Span tokenizer satisfies to <see href="https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/statements/iteration-statements#the-foreach-statement">foreach statement pattern</see>.
+/// <see langword="ref"/> <see langword="struct"/> that tokenizes a given <see cref="Span{T}"/> or <see cref="ReadOnlySpan{T}"/> source.
+/// It should be used directly within a <see langword="foreach"/> loop.
+/// It use <see cref="SpanCustomTokenizer.TokenizeFunc{T}"/> delegate to enumerate all tokens in a source.
+/// It use <see cref="SpanCustomTokenizer.TrimFunc{T}"/> delegate to trim tokens.
+/// It satisfies to <see href="https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/statements/iteration-statements#the-foreach-statement">foreach statement pattern</see>.
 /// </summary>
 /// <typeparam name="T">The type of elements in the span.</typeparam>
-public ref struct SpanCustomTokenizer<T>
+/// <remarks>
+/// Initializes a new instance of the <see cref="SpanCustomTokenizer{T}"/> struct.
+/// </remarks>
+/// <param name="source">The source <see cref="ReadOnlySpan{T}"/> instance.</param>
+/// <param name="tokenizeFunc">The <see cref="SpanCustomTokenizer.TokenizeFunc{T}"/> delegate to get next token in the <paramref name="source"/>.</param>
+/// <param name="trimFunc">The <see cref="SpanCustomTokenizer.TrimFunc{T}"/>  delegate to trim current token.</param>
+/// <param name="skipEmpty">The flag to skip empty tokens.</param>
+public ref struct SpanCustomTokenizer<T>(ReadOnlySpan<T> source, SpanCustomTokenizer.TokenizeFunc<T> tokenizeFunc,
+    SpanCustomTokenizer.TrimFunc<T>? trimFunc = null, bool skipEmpty = false)
     where T : IEquatable<T>
 {
-    // The current source Span[T] instance.
-    private ReadOnlySpan<T> source;
+    // Not yet tokenized part of a source.
+    private ReadOnlySpan<T> source = source;
 
-    // Offset of the current source relative to the original
-    private int sourceOffset;
+    /// <summary>
+    /// Not yet tokenized part of a source.
+    /// </summary>
+    public ReadOnlySpan<T> UntokenizedSourcePart 
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => this.source;
+    }
 
-    // Range of the current token in the source.
+    // Offset of the untokenized source relative to the original source
+    private int sourceOffset = 0;
+
+    // Range of the current token in the original source.
 #if NETSTANDARD2_1_OR_GREATER
-    private Range range;
+    private Range tokenRange = default;
 #else
-    private (int Start, int End) range;
+    private (int Start, int End) tokenRange = default;
 #endif
 
-    // The SpanGetNextTokenFunc<T> delegate to get next token in the source.
-    private readonly SpanGetNextTokenFunc<T> getNextTokenFunc;
+    // The delegate to get next token in the source.
+    private readonly SpanCustomTokenizer.TokenizeFunc<T> tokenizeFunc = tokenizeFunc;
 
-    // The SpanTrimFunc<T> delegate to trim current token.
-    private readonly SpanTrimFunc<T>? trimFunc;
+    // The delegate to trim current token.
+    private readonly SpanCustomTokenizer.TrimFunc<T>? trimFunc = trimFunc;
 
     // The flag to skip empty tokens.
-    private readonly bool skipEmpty;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="SpanCustomTokenizer{T}"/> struct.
-    /// </summary>
-    /// <param name="source">The source <see cref="Span{T}"/> instance.</param>
-    /// <param name="getNextTokenFunc">The <see cref="SpanGetNextTokenFunc{T}"/> delegate to get next token in the <paramref name="source"/>.</param>
-    /// <param name="trimFunc">The <see cref="SpanTrimFunc{T}"/>  delegate to trim current token.</param>
-    /// <param name="skipEmpty">The flag to skip empty tokens.</param>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public SpanCustomTokenizer(Span<T> source, SpanGetNextTokenFunc<T> getNextTokenFunc, 
-        SpanTrimFunc<T>? trimFunc = null, bool skipEmpty = false)
-    {
-        this.source = source;
-        this.sourceOffset = 0;
-        this.range = default;
-        this.getNextTokenFunc = getNextTokenFunc;
-        this.trimFunc = trimFunc;
-        this.skipEmpty = skipEmpty;
-    }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="SpanCustomTokenizer{T}"/> struct.
-    /// </summary>
-    /// <param name="source">The source <see cref="ReadOnlySpan{T}"/> instance.</param>
-    /// <param name="getNextTokenFunc">The <see cref="SpanGetNextTokenFunc{T}"/> delegate to get next token in the <paramref name="source"/>.</param>
-    /// <param name="trimFunc">The <see cref="SpanTrimFunc{T}"/>  delegate to trim current token.</param>
-    /// <param name="skipEmpty">The flag to skip empty tokens.</param>
-    public SpanCustomTokenizer(ReadOnlySpan<T> source, SpanGetNextTokenFunc<T> getNextTokenFunc,
-        SpanTrimFunc<T>? trimFunc = null, bool skipEmpty = false)
-    {
-        this.source = source;
-        this.sourceOffset = 0;
-        this.range = default;
-        this.getNextTokenFunc = getNextTokenFunc;
-        this.trimFunc = trimFunc;
-        this.skipEmpty = skipEmpty;
-    }
+    private readonly bool skipEmpty = skipEmpty;
 
     /// <summary>
     /// Implements the duck-typed <see cref="IEnumerable{T}.GetEnumerator"/> method.
     /// </summary>
-    /// <returns>An <see cref="SpanTokenizer{T}"/> instance targeting the current <see cref="Span{T}"/> value.</returns>
+    /// <returns>An <see cref="SpanCustomTokenizer{T}"/> instance targeting <see cref="ReadOnlySpan{T}"/> source.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public readonly SpanCustomTokenizer<T> GetEnumerator() => this;
 
@@ -123,113 +83,45 @@ public ref struct SpanCustomTokenizer<T>
             return false;
         }
 
-        (int start, int end) = this.getNextTokenFunc(this.source);
-        Debug.Assert(start >= -1 && start <= this.source.Length,
-            $"SpanCustomTokenizer.getNextTokenFunc return Start {start} out of range [-1, {this.source.Length}]");
-        Debug.Assert(end >= -1 && end <= this.source.Length,
-            $"SpanCustomTokenizer.endIndex return End {end} out of range [-1, {this.source.Length}]");
+        ((int Start, int End) token, (int Start, int End) nextSource) = this.tokenizeFunc(this.source);
+        Debug.Assert(token.Start >= 0 && token.Start <= this.source.Length,
+                $"SpanCustomTokenizer.TokenizeFunc return Token.Start {token.Start} out of range [0, {this.source.Length}]");
+        Debug.Assert(token.End >= token.Start && token.End <= this.source.Length,
+                $"SpanCustomTokenizer.TokenizeFunc return Token.End {token.End} out of range [{token.Start}, {this.source.Length}]");
+        Debug.Assert(nextSource.Start >= 0 && nextSource.Start <= this.source.Length,
+                $"SpanCustomTokenizer.TokenizeFunc return NextSource.Start {nextSource.Start} out of range [0, {this.source.Length}]");
+        Debug.Assert(nextSource.End >= nextSource.Start && nextSource.End <= this.source.Length,
+                $"SpanCustomTokenizer.TokenizeFunc return NextSource.End {nextSource.End} out of range [{nextSource.Start}, {this.source.Length}]");
 
-        int len = end - start;
-        if (len > 0)
+
+        int tokenLen = token.End - token.Start;
+        if (tokenLen > 0 && this.trimFunc is not null)
         {
-            if (this.trimFunc is not null)
-            {
-                (int startTrimmed, int endTrimmed) = this.getNextTokenFunc(this.source.Slice(start, len));
-                Debug.Assert(startTrimmed >= 0 && startTrimmed <= len,
-                    $"SpanCustomTokenizer.getNextTokenFunc return Start {startTrimmed} out of range [0, {len}].");
-                Debug.Assert(endTrimmed >= startTrimmed && endTrimmed <= len,
-                    $"SpanCustomTokenizer.getNextTokenFunc return End {endTrimmed} out of range [{startTrimmed}, {len}].");
-
-                if (this.skipEmpty && endTrimmed <= startTrimmed)
-                {
-                    this.source = this.source.Slice(end);
-                    this.sourceOffset += end;
-                    goto SkipEmpty;
-                }
-
-#if NETSTANDARD2_1_OR_GREATER
-                this.range = new Range(
-                    new Index(start + startTrimmed + this.sourceOffset),
-                    new Index(start + endTrimmed + this.sourceOffset));
-#else
-                this.range = (
-                    start + startTrimmed + this.sourceOffset,
-                    start + endTrimmed + this.sourceOffset);
-#endif
-            }
-            else
-            {
-#if NETSTANDARD2_1_OR_GREATER
-                this.range = new Range(
-                    new Index(start + this.sourceOffset),
-                    new Index(end + this.sourceOffset));
-#else
-                this.range = (
-                    start + this.sourceOffset,
-                    end + this.sourceOffset);
-#endif
-            }
-
-            this.source = this.source.Slice(end);
-            this.sourceOffset += end;
-            return true;
+            (token.Start, token.End) = this.trimFunc(this.source.Slice(token.Start, tokenLen));
+            Debug.Assert(token.Start >= 0 && token.Start <= tokenLen,
+                $"SpanCustomTokenizer.TrimFunc return Start {token.Start} out of range [0, {tokenLen}].");
+            Debug.Assert(token.End >= token.Start && token.End <= tokenLen,
+                $"SpanCustomTokenizer.TrimFunc return End {token.End} out of range [{token.Start}, {tokenLen}].");
+            tokenLen = token.End - token.Start;
         }
-        else if (len > 0)
+
+        if (tokenLen <= 0 && this.skipEmpty)
         {
-            if (this.trimFunc is not null)
-            {
-                (int startTrimmed, int endTrimmed) = this.getNextTokenFunc(this.source.Slice(end + 1, len));
-                Debug.Assert(startTrimmed >= 0 && startTrimmed <= len,
-                    $"SpanCustomTokenizer.getNextTokenFunc return Start {startTrimmed} out of range [0, {len}].");
-                Debug.Assert(endTrimmed >= startTrimmed && endTrimmed <= len,
-                    $"SpanCustomTokenizer.getNextTokenFunc return End {endTrimmed} out of range [{startTrimmed}, {len}].");
-
-                if (this.skipEmpty && endTrimmed <= startTrimmed)
-                {
-                    this.source = this.source.Slice(0, end);
-                    goto SkipEmpty;
-                }
-
-#if NETSTANDARD2_1_OR_GREATER
-                this.range = new Range(
-                    new Index(end + startTrimmed + this.sourceOffset + 1),
-                    new Index(end + endTrimmed + this.sourceOffset + 1));
-#else
-                this.range = (
-                    end + startTrimmed + this.sourceOffset + 1,
-                    end + endTrimmed + this.sourceOffset + 1);
-#endif
-            }
-            else
-            {
-#if NETSTANDARD2_1_OR_GREATER
-                this.range = new Range(
-                    new Index(end + this.sourceOffset + 1),
-                    new Index(start + this.sourceOffset + 1));
-#else
-                this.range = (
-                    end + this.sourceOffset + 1,
-                    start + this.sourceOffset + 1);
-#endif
-            }
-
-            this.source = this.source.Slice(0, end);
-            return true;
+            this.source = this.source.Slice(nextSource.Start, nextSource.End - nextSource.Start);
+            this.sourceOffset += nextSource.Start;
+            goto SkipEmpty;
         }
-        else
-        {
-            start = Math.Max(start + this.sourceOffset, 0);
-#if NETSTANDARD2_1_OR_GREATER
-            Index index = start;
-            this.range = new Range(index, index);
-#else
-            this.range = (start, start);
-#endif
-            this.source = Span<T>.Empty;
 
-            return false;
-        }
+#if NETSTANDARD2_1_OR_GREATER
+        this.tokenRange = new Range(token.Start + this.sourceOffset, token.End + this.sourceOffset);
+#else
+        this.range = (token.Start + this.sourceOffset, token.End + this.sourceOffset);
+#endif
+        this.source = this.source.Slice(nextSource.Start, nextSource.End - nextSource.Start);
+        this.sourceOffset += nextSource.Start;
+        return true;
     }
+
 
     /// <summary>
     /// Gets the duck-typed <see cref="IEnumerator{T}.Current"/> property.
@@ -241,6 +133,6 @@ public ref struct SpanCustomTokenizer<T>
 #endif
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => this.range;
+        get => this.tokenRange;
     }
 }

@@ -231,6 +231,32 @@ public static class SpanExtensions
     }
 
     /// <summary>
+    /// Tokenizes the values in the input <see cref="Span{T}"/> instance using a specified separators.
+    /// This extension should be used directly within a <see langword="foreach"/> loop:
+    /// <code>
+    /// Span&lt;char&gt; text = "Hello, world!".ToCharArray();
+    ///
+    /// foreach (var token in text.Tokenize([' ', ',', '.']))
+    /// {
+    ///     // Access the tokens here...
+    /// }
+    /// </code>
+    /// The compiler will take care of properly setting up the <see langword="foreach"/> loop with the type returned from this method.
+    /// </summary>
+    /// <typeparam name="T">The type of items in the <see cref="Span{T}"/> to tokenize.</typeparam>
+    /// 
+    /// <param name="source">The source <see cref="Span{T}"/> to tokenize.</param>
+    /// <param name="separator">An array of delimiting <typeparamref name="T"/> items.
+    /// <returns>A wrapper type that will handle the tokenization for <paramref name="source"/>.</returns>
+    /// <remarks>The returned <see cref="SpanCustomTokenizer{T}"/> value shouldn't be used directly: use this extension in a <see langword="foreach"/> loop.</remarks>
+    public static SpanCustomTokenizer<T> Tokenize<T>(this ReadOnlySpan<T> source, StringSplitOptions options, params T[] separator)
+            where T : IEquatable<T>
+    {
+        (SpanCustomTokenizer.TokenizeFunc<T> tokenizeFunc, SpanCustomTokenizer.TrimFunc<T>? trimFunc) = SpanCustomTokenizer.CreateTokenizationFuncs(options, separator);
+        return new SpanCustomTokenizer<T>(source, tokenizeFunc, trimFunc, options.HasFlag(StringSplitOptions.RemoveEmptyEntries));
+    }
+
+    /// <summary>
     /// Gets a content hash from the input <see cref="Span{T}"/> instance using the Djb2 algorithm.
     /// For more info, see the documentation for <see cref="ReadOnlySpanExtensions.GetDjb2HashCode{T}"/>.
     /// </summary>
