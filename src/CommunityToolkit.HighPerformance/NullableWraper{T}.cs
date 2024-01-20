@@ -23,7 +23,7 @@ namespace CommunityToolkit.HighPerformance;
 /// available.
 /// </summary>
 /// <typeparam name="T">The underlying value type of the this wrapper structure.</typeparam>
-public sealed class NullableWrapper<T> : IEquatable<NullableWrapper<T>>
+public sealed class NullableWrapper<T> : IEquatable<NullableWrapper<T>>, IComparable<NullableWrapper<T>>
     where T : struct
 {
 #pragma warning disable IDE0051 // Remove unused private members
@@ -115,18 +115,39 @@ public sealed class NullableWrapper<T> : IEquatable<NullableWrapper<T>>
     /// <summary>
     /// Indicates whether this value is equal to another value.
     /// </summary>
-    /// <param name="other">The other value.</param>
+    /// <param name="other">The other value to compare with this value.</param>
     /// <returns>true if this value is equal to the <paramref name="other"/> value; otherwise, false.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+#pragma warning disable CS8767 // Nullability of reference types in type of parameter doesn't match implicitly implemented member (possibly because of nullability attributes).
     public bool Equals(NullableWrapper<T> other)
+#pragma warning restore CS8767 // Nullability of reference types in type of parameter doesn't match implicitly implemented member (possibly because of nullability attributes).
         => EqualityComparer<T?>.Default.Equals(this, other);
+
+    /// <summary>
+    /// Compares this value with another value and returns an integer that indicates whether the this value precedes, 
+    /// follows, or occurs in the same position in the sort order as the other value.
+    /// </summary>
+    /// <param name="other">The other value to compare with this instance.</param>
+    /// <returns>
+    /// A value that indicates the relative order of the values being compared. The return value has these meanings:
+    /// 
+    ///     Value – Meaning
+    ///     Less than zero – This value precedes other value in the sort order.
+    ///     Zero – This value occurs in the same position in the sort order as other value.
+    ///     Greater than zero – This value follows other value in the sort order.
+    /// </returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public int CompareTo(NullableWrapper<T>? other)
+        => Comparer<T?>.Default.Compare(this, other!);
 
     /// <summary>
     /// Indicates whether the <paramref name="left"/> value is equal to the <paramref name="right"/> value.
     /// </summary>
-    /// <param name="left">The left value.</param>
-    /// <param name="right">The left value.</param>
-    /// <returns>true if the <paramref name="left"/> value is equal to the <paramref name="right"/> value; otherwise, false.</returns>
+    /// <param name="left">The left value to compare with the <paramref name="right"/> value.</param>
+    /// <param name="right">The right value to compare with the <paramref name="left"/> value.</param>
+    /// <returns>
+    /// true if the <paramref name="left"/> value is equal to the <paramref name="right"/> value; otherwise, false.
+    /// </returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool operator ==(NullableWrapper<T> left, NullableWrapper<T> right)
         => EqualityComparer<T?>.Default.Equals(left, right);
@@ -134,11 +155,59 @@ public sealed class NullableWrapper<T> : IEquatable<NullableWrapper<T>>
     /// <summary>
     /// Indicates whether the <paramref name="left"/> value is not equal to the <paramref name="right"/> value.
     /// </summary>
-    /// <param name="left">The left value.</param>
-    /// <param name="right">The left value.</param>
-    /// <returns>true if the <paramref name="left"/> value is not equal to the <paramref name="right"/> value; otherwise, false.</returns>
+    /// <param name="left">The left value to compare with the <paramref name="right"/> value.</param>
+    /// <param name="right">The right value to compare with the <paramref name="left"/> value.</param>
+    /// <returns>
+    /// true if the <paramref name="left"/> value is not equal to the <paramref name="right"/> value; otherwise, false.
+    /// </returns>
     public static bool operator !=(NullableWrapper<T> left, NullableWrapper<T> right)
         => !EqualityComparer<T?>.Default.Equals(left, right);
+
+    /// <summary>
+    /// Indicates whether the <paramref name="left"/> value is less than the <paramref name="right"/> value.
+    /// </summary>
+    /// <param name="left">The left value to compare with the <paramref name="right"/> value.</param>
+    /// <param name="right">The right value to compare with the <paramref name="left"/> value.</param>
+    /// <returns>
+    /// true if the <paramref name="left"/> value is less then the <paramref name="right"/> value; otherwise, false.
+    /// </returns>
+    public static bool operator <(NullableWrapper<T> left, NullableWrapper<T> right)
+        => Comparer<T?>.Default.Compare(left, right) < 0;
+
+    /// <summary>
+    /// Indicates whether the <paramref name="left"/> value is greater than the <paramref name="right"/> value.
+    /// </summary>
+    /// <param name="left">The left value to compare with the <paramref name="right"/> value.</param>
+    /// <param name="right">The right value to compare with the <paramref name="left"/> value.</param>
+    /// <returns>
+    /// true if the <paramref name="left"/> value is greater then the <paramref name="right"/> value; otherwise, false.
+    /// </returns>
+    public static bool operator >(NullableWrapper<T> left, NullableWrapper<T> right)
+        => Comparer<T?>.Default.Compare(left, right) > 0;
+
+    /// <summary>
+    /// Indicates whether the <paramref name="left"/> value is less than the <paramref name="right"/> value.
+    /// </summary>
+    /// <param name="left">The left value to compare with the <paramref name="right"/> value.</param>
+    /// <param name="right">The right value to compare with the <paramref name="left"/> value.</param>
+    /// <returns>
+    /// true if the <paramref name="left"/> value is less then the <paramref name="right"/> value; otherwise, false.
+    /// </returns>
+    public static bool operator <=(NullableWrapper<T> left, NullableWrapper<T> right)
+        => Comparer<T?>.Default.Compare(left, right) <= 0;
+
+    /// <summary>
+    /// Indicates whether the <paramref name="left"/> value is greater than or equal to the <paramref name="right"/> 
+    /// value.
+    /// </summary>
+    /// <param name="left">The left value to compare with the <paramref name="right"/> value.</param>
+    /// <param name="right">The right value to compare with the <paramref name="left"/> value.</param>
+    /// <returns>
+    /// true if the <paramref name="left"/> value is greater than or equal to the <paramref name="right"/> value; 
+    /// otherwise, false.
+    /// </returns>
+    public static bool operator >=(NullableWrapper<T> left, NullableWrapper<T> right)
+        => Comparer<T?>.Default.Compare(left, right) >= 0;
 
     /// <summary>
     /// Implicitly creates a new <see cref="NullableWrapper{T}"/> instance from a given <typeparamref name="T"/> value.
