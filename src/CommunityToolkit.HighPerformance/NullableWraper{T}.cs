@@ -195,13 +195,61 @@ public static partial class SpanExtensions
 {
 #if NETSTANDARD2_1_OR_GREATER
 
-    public static Span<NullableWrapper<T>> WithNullableWrapper<T>(Span<T?> source)
+    /// <summary>
+    /// Creates a <see cref="Span{T}"/> with <see cref="NullableWrapper{T}"/> elements that support the 
+    /// <see cref="IEquatable{T}"/> and <see cref="IComparable{T}"/> interfaces. After this, many 
+    /// <see cref="MemoryExtensions"/> methods for this span become available.
+    /// </summary>
+    /// <typeparam name="T">The underlying value type of span elements.</typeparam>
+    /// <param name="source">A source with <see cref="Nullable{T}"/> elements.</param>
+    /// <returns>
+    /// A <see cref="Span{T}"/> with <see cref="NullableWrapper{T}"/> elements that support the 
+    /// <see cref="IEquatable{T}"/> and <see cref="IComparable{T}"/> interfaces.
+    /// </returns>
+    public static Span<NullableWrapper<T>> WithNullableWrapper<T>(this Span<T?> source)
         where T : struct
-    => MemoryMarshal.CreateSpan(ref Unsafe.As<T?, NullableWrapper<T>>(ref MemoryMarshal.GetReference(source)), source.Length);
+    => MemoryMarshal.CreateSpan(ref Unsafe.As<T?, NullableWrapper<T>>(
+        ref MemoryMarshal.GetReference(source)), source.Length);
 
-    public static Span<T?> WithNullable<T>(Span<NullableWrapper<T>> source)
+    /// <summary>
+    /// Creates a <see cref="ReadOnlySpan{T}"/> with <see cref="NullableWrapper{T}"/> elements that support the 
+    /// <see cref="IEquatable{T}"/> and <see cref="IComparable{T}"/> interfaces. After this, many 
+    /// <see cref="MemoryExtensions"/> methods for this span become available.
+    /// </summary>
+    /// <typeparam name="T">The underlying value type of span elements.</typeparam>
+    /// <param name="source">A source with <see cref="Nullable{T}"/> elements.</param>
+    /// <returns>
+    /// A <see cref="ReadOnlySpan{T}"/> with <see cref="NullableWrapper{T}"/> elements that support the 
+    /// <see cref="IEquatable{T}"/> and <see cref="IComparable{T}"/> interfaces.
+    /// </returns>
+    public static ReadOnlySpan<NullableWrapper<T>> WithNullableWrapper<T>(this ReadOnlySpan<T?> source)
         where T : struct
-    => MemoryMarshal.CreateSpan(ref Unsafe.As<NullableWrapper<T>, T?>(ref MemoryMarshal.GetReference(source)), source.Length);
+    => MemoryMarshal.CreateReadOnlySpan(ref Unsafe.As<T?, NullableWrapper<T>>(
+        ref MemoryMarshal.GetReference(source)), source.Length);
+
+    /// <summary>
+    /// Creates a <see cref="Span{T}"/> with original <see cref="Nullable{T}"/> elements if you need Span with original 
+    /// <see cref="Nullable{T}"/> elements after <see cref="WithNullableWrapper{T}(Span{T?})"/> method.
+    /// </summary>
+    /// <typeparam name="T">The underlying value type of span elements.</typeparam>
+    /// <param name="source">A source with <see cref="NullableWrapper{T}"/> elements.</param>
+    /// <returns><see cref="Span{T}"/> with <see cref="Nullable{T}"/> elements.</returns>
+    public static Span<T?> WithNullable<T>(this Span<NullableWrapper<T>> source)
+        where T : struct
+    => MemoryMarshal.CreateSpan(ref Unsafe.As<NullableWrapper<T>, T?>(
+        ref MemoryMarshal.GetReference(source)), source.Length);
+
+    /// <summary>
+    /// Creates a <see cref="Span{T}"/> with original <see cref="Nullable{T}"/> elements if you need Span with original 
+    /// <see cref="Nullable{T}"/> elements after <see cref="WithNullableWrapper{T}(Span{T?})"/> method.
+    /// </summary>
+    /// <typeparam name="T">The underlying value type of span elements.</typeparam>
+    /// <param name="source">A source with <see cref="NullableWrapper{T}"/> elements.</param>
+    /// <returns><see cref="Span{T}"/> with <see cref="Nullable{T}"/> elements.</returns>
+    public static ReadOnlySpan<T?> WithNullable<T>(this ReadOnlySpan<NullableWrapper<T>> source)
+        where T : struct
+    => MemoryMarshal.CreateReadOnlySpan(ref Unsafe.As<NullableWrapper<T>, T?>(
+        ref MemoryMarshal.GetReference(source)), source.Length);
 
 #endif
 }
