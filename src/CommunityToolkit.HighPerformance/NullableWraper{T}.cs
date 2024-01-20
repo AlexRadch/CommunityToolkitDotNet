@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -22,7 +23,7 @@ namespace CommunityToolkit.HighPerformance;
 /// available.
 /// </summary>
 /// <typeparam name="T">The underlying value type of the this wrapper structure.</typeparam>
-public sealed class NullableWrapper<T>
+public sealed class NullableWrapper<T> : IEquatable<NullableWrapper<T>>
     where T : struct
 {
 #pragma warning disable IDE0051 // Remove unused private members
@@ -112,6 +113,34 @@ public sealed class NullableWrapper<T>
     public override string? ToString() => NullableExtensions.AsReadonlyRefToNullable(this).ToString();
 
     /// <summary>
+    /// Indicates whether this value is equal to another value.
+    /// </summary>
+    /// <param name="other">The other value.</param>
+    /// <returns>true if this value is equal to the <paramref name="other"/> value; otherwise, false.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool Equals(NullableWrapper<T> other)
+        => EqualityComparer<T?>.Default.Equals(this, other);
+
+    /// <summary>
+    /// Indicates whether the <paramref name="left"/> value is equal to the <paramref name="right"/> value.
+    /// </summary>
+    /// <param name="left">The left value.</param>
+    /// <param name="right">The left value.</param>
+    /// <returns>true if the <paramref name="left"/> value is equal to the <paramref name="right"/> value; otherwise, false.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool operator ==(NullableWrapper<T> left, NullableWrapper<T> right)
+        => EqualityComparer<T?>.Default.Equals(left, right);
+
+    /// <summary>
+    /// Indicates whether the <paramref name="left"/> value is not equal to the <paramref name="right"/> value.
+    /// </summary>
+    /// <param name="left">The left value.</param>
+    /// <param name="right">The left value.</param>
+    /// <returns>true if the <paramref name="left"/> value is not equal to the <paramref name="right"/> value; otherwise, false.</returns>
+    public static bool operator !=(NullableWrapper<T> left, NullableWrapper<T> right)
+        => !EqualityComparer<T?>.Default.Equals(left, right);
+
+    /// <summary>
     /// Implicitly creates a new <see cref="NullableWrapper{T}"/> instance from a given <typeparamref name="T"/> value.
     /// </summary>
     /// <param name="value"></param>
@@ -140,6 +169,9 @@ public sealed class NullableWrapper<T>
     public static explicit operator T(NullableWrapper<T> value) => value.Value;
 }
 
+/// <summary>
+/// Helpers for working with the <see cref="Nullable{T}"/> type.
+/// </summary>
 public static partial class NullableExtensions
 {
     /// <summary>
