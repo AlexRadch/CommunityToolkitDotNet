@@ -17,7 +17,7 @@ namespace CommunityToolkit.HighPerformance;
 /// <summary>
 /// Helpers for working with the <see cref="Nullable{T}"/> type.
 /// </summary>
-public static class NullableExtensions
+public static partial class NullableExtensions
 {
     /// <summary>
     /// Returns a reference to the value of the input <see cref="Nullable{T}"/> instance, regardless of whether
