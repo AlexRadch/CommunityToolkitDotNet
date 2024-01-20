@@ -4,6 +4,7 @@
 
 using System;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace CommunityToolkit.HighPerformance;
 
@@ -61,7 +62,7 @@ public sealed class NullableWrapper<T>
     public bool HasValue
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => NullableExtensions.AsNullableReadonlyRef(this).HasValue;
+        get => NullableExtensions.AsReadonlyRefToNullable(this).HasValue;
     }
 
     /// <summary>
@@ -70,7 +71,7 @@ public sealed class NullableWrapper<T>
     public T Value
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => NullableExtensions.AsNullableReadonlyRef(this)!.Value;
+        get => NullableExtensions.AsReadonlyRefToNullable(this)!.Value;
     }
 
     /// <summary>
@@ -78,15 +79,15 @@ public sealed class NullableWrapper<T>
     /// </summary>
     /// <returns><see cref="Nullable{T}.GetValueOrDefault()"/></returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public T GetValueOrDefault() => NullableExtensions.AsNullableReadonlyRef(this).GetValueOrDefault();
+    public T GetValueOrDefault() => NullableExtensions.AsReadonlyRefToNullable(this).GetValueOrDefault();
 
     /// <summary>
     /// <see cref="Nullable{T}.GetValueOrDefault(T)"/>
     /// </summary>
     /// <returns><see cref="Nullable{T}.GetValueOrDefault(T)"/></returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public T GetValueOrDefault(T defaultValue) => NullableExtensions.AsNullableReadonlyRef(this).
-        GetValueOrDefault(defaultValue);
+    public T GetValueOrDefault(T defaultValue) 
+        => NullableExtensions.AsReadonlyRefToNullable(this).GetValueOrDefault(defaultValue);
 
     /// <summary>
     /// <see cref="Nullable{T}.Equals"/>
@@ -94,53 +95,51 @@ public sealed class NullableWrapper<T>
     /// <param name="other"><see cref="Nullable{T}.Equals(object?)"/></param>
     /// <returns><see cref="Nullable{T}.Equals(object?)"/></returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public override bool Equals(object? other) => NullableExtensions.AsNullableReadonlyRef(this).Equals(other);
+    public override bool Equals(object? other) => NullableExtensions.AsReadonlyRefToNullable(this).Equals(other);
 
     /// <summary>
     /// <see cref="Nullable{T}.GetHashCode"/>
     /// </summary>
     /// <returns><see cref="Nullable{T}.GetHashCode()"/></returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public override int GetHashCode() => NullableExtensions.AsNullableReadonlyRef(this).GetHashCode();
+    public override int GetHashCode() => NullableExtensions.AsReadonlyRefToNullable(this).GetHashCode();
 
     /// <summary>
     /// <see cref="Nullable{T}.ToString"/>
     /// </summary>
     /// <returns><see cref="Nullable{T}.ToString"/></returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public override string? ToString() => NullableExtensions.AsNullableReadonlyRef(this).ToString();
+    public override string? ToString() => NullableExtensions.AsReadonlyRefToNullable(this).ToString();
 
     /// <summary>
     /// Implicitly creates a new <see cref="NullableWrapper{T}"/> instance from a given <typeparamref name="T"/> value.
     /// </summary>
     /// <param name="value"></param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static implicit operator NullableWrapper<T>(T value) => NullableExtensions.AsNullableWrapperReadonlyRef(new T?(value));
-
-    /// <summary>
-    /// Explicitly gets the <typeparamref name="T"/> value from a given <see cref="NullableWrapper{T}"/> instance.
-    /// </summary>
-    /// <param name="value">The input <see cref="NullableWrapper{T}"/> instance.</param>
-    public static explicit operator T(NullableWrapper<T> value) => NullableExtensions.AsNullableReadonlyRef(value)!.Value;
-
-    /// <summary>
-    /// Implicitly creates a new <see cref="NullableWrapper{T}"/> instance from a given <typeparamref name="T"/> value.
-    /// </summary>
-    /// <param name="value"></param>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static implicit operator NullableWrapper<T>(T? value) => NullableExtensions.AsNullableWrapperReadonlyRef(in value);
+    public static implicit operator NullableWrapper<T>(T? value) 
+        => NullableExtensions.AsReadonlyRefToNullableWrapper(in value);
 
     /// <summary>
     /// Implicitly creates a new <see cref="Nullable{T}"/> instance from a given <typeparamref name="T"/> value.
     /// </summary>
     /// <param name="value"></param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static implicit operator T?(NullableWrapper<T> value) => NullableExtensions.AsNullableReadonlyRef(in value);
+    public static implicit operator T?(NullableWrapper<T> value) => NullableExtensions.AsReadonlyRefToNullable(value);
+
+    /// <summary>
+    /// Implicitly creates a new <see cref="NullableWrapper{T}"/> instance from a given <typeparamref name="T"/> value.
+    /// </summary>
+    /// <param name="value"></param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static implicit operator NullableWrapper<T>(T value) => (NullableWrapper<T>)(T?)value;
+
+    /// <summary>
+    /// Explicitly gets the <typeparamref name="T"/> value from a given <see cref="NullableWrapper{T}"/> instance.
+    /// </summary>
+    /// <param name="value">The input <see cref="NullableWrapper{T}"/> instance.</param>
+    public static explicit operator T(NullableWrapper<T> value) => value.Value;
 }
 
-/// <summary>
-/// Helpers for working with the <see cref="NullableWrapper{T}"/> type.
-/// </summary>
 public static partial class NullableExtensions
 {
     /// <summary>
@@ -148,126 +147,61 @@ public static partial class NullableExtensions
     /// to a value of <see cref="Nullable{T}"/> type.
     /// </summary>
     /// <typeparam name="T">The underlying value type.</typeparam>
-    /// <param name="source">The readonly reference to <see cref="NullableWrapper{T}"/> instance.</param>
+    /// <param name="source">The readonly reference to <see cref="NullableWrapper{T}"/> instance to reinterpret.</param>
     /// <returns>A readonly reference to a value of <see cref="Nullable{T}"/> type.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ref readonly T? AsNullableReadonlyRef<T>(in NullableWrapper<T> source)
+    public static ref readonly T? AsReadonlyRefToNullable<T>(in NullableWrapper<T> source) 
         where T : struct
-    {
-        // The reason why this method is an extension and is not part of
-        // the NullableWrapper<T> type itself is that NullableWrapper<T> is
-        // really just a mask used over Nullable<T> structure, but it is never
-        // actually instantiated. Because of this, the method table of the
-        // objects in the heap will be the one of type T created by the runtime,
-        // and not the one of the Nullable<T> type. To avoid potential issues
-        // when invoking this method on different runtimes, which might handle
-        // that scenario differently, we use an extension method, which is just
-        // syntactic sugar for a static method belonging to another class. This
-        // isn't technically necessary, but it's just an extra precaution since
-        // the syntax for users remains exactly the same anyway. Here we just
-        // call the Unsafe.Unbox<T>(object) API, which is hidden away for users
-        // of the type for simplicity. Note that this API will always actually
-        // involve a conditional branch, which is introduced by the JIT compiler
-        // to validate the object instance being unboxed. But since the
-        // alternative of manually tracking the offset to the boxed data would be
-        // both more error prone, and it would still introduce some overhead,
-        // this doesn't really matter in this case anyway.
-        return ref Unsafe.As<NullableWrapper<T>, T?>(ref Unsafe.AsRef(in source));
-    }
+    => ref Unsafe.As<NullableWrapper<T>, T?>(ref Unsafe.AsRef(in source));
 
     /// <summary>
     /// Reinterprets the given reference to a <see cref="NullableWrapper{T}"/> value as a reference to a value of 
     /// <see cref="Nullable{T}"/> type.
     /// </summary>
     /// <typeparam name="T">The underlying value type.</typeparam>
-    /// <param name="source">The reference to <see cref="NullableWrapper{T}"/> instance.</param>
+    /// <param name="source">The reference to <see cref="NullableWrapper{T}"/> instance to reinterpret.</param>
     /// <returns>A readonly reference to a value of <see cref="Nullable{T}"/> type.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ref T? AsNullableRef<T>(ref NullableWrapper<T> source)
+    public static ref T? AsRefToNullable<T>(ref NullableWrapper<T> source)
         where T : struct
-    {
-        // The reason why this method is an extension and is not part of
-        // the NullableWrapper<T> type itself is that NullableWrapper<T> is
-        // really just a mask used over Nullable<T> structure, but it is never
-        // actually instantiated. Because of this, the method table of the
-        // objects in the heap will be the one of type T created by the runtime,
-        // and not the one of the Nullable<T> type. To avoid potential issues
-        // when invoking this method on different runtimes, which might handle
-        // that scenario differently, we use an extension method, which is just
-        // syntactic sugar for a static method belonging to another class. This
-        // isn't technically necessary, but it's just an extra precaution since
-        // the syntax for users remains exactly the same anyway. Here we just
-        // call the Unsafe.Unbox<T>(object) API, which is hidden away for users
-        // of the type for simplicity. Note that this API will always actually
-        // involve a conditional branch, which is introduced by the JIT compiler
-        // to validate the object instance being unboxed. But since the
-        // alternative of manually tracking the offset to the boxed data would be
-        // both more error prone, and it would still introduce some overhead,
-        // this doesn't really matter in this case anyway.
-        return ref Unsafe.As<NullableWrapper<T>, T?>(ref source);
-    }
+    => ref Unsafe.As<NullableWrapper<T>, T?>(ref source);
 
     /// <summary>
     /// Reinterprets the given readonly reference to a <see cref="NullableWrapper{T}"/> value as a readonly reference 
     /// to a value of <see cref="Nullable{T}"/> type.
     /// </summary>
     /// <typeparam name="T">The underlying value type.</typeparam>
-    /// <param name="source">The readonly reference to <see cref="Nullable{T}"/> instance.</param>
+    /// <param name="source">The readonly reference to <see cref="Nullable{T}"/> instance to reinterpret.</param>
     /// <returns>A readonly reference to a value of <see cref="NullableWrapper{T}"/> type.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ref readonly NullableWrapper<T> AsNullableWrapperReadonlyRef<T>(in T? source)
+    public static ref readonly NullableWrapper<T> AsReadonlyRefToNullableWrapper<T>(in T? source)
         where T : struct
-    {
-        // The reason why this method is an extension and is not part of
-        // the NullableWrapper<T> type itself is that NullableWrapper<T> is
-        // really just a mask used over Nullable<T> structure, but it is never
-        // actually instantiated. Because of this, the method table of the
-        // objects in the heap will be the one of type T created by the runtime,
-        // and not the one of the Nullable<T> type. To avoid potential issues
-        // when invoking this method on different runtimes, which might handle
-        // that scenario differently, we use an extension method, which is just
-        // syntactic sugar for a static method belonging to another class. This
-        // isn't technically necessary, but it's just an extra precaution since
-        // the syntax for users remains exactly the same anyway. Here we just
-        // call the Unsafe.Unbox<T>(object) API, which is hidden away for users
-        // of the type for simplicity. Note that this API will always actually
-        // involve a conditional branch, which is introduced by the JIT compiler
-        // to validate the object instance being unboxed. But since the
-        // alternative of manually tracking the offset to the boxed data would be
-        // both more error prone, and it would still introduce some overhead,
-        // this doesn't really matter in this case anyway.
-        return ref Unsafe.As<T?, NullableWrapper<T>>(ref Unsafe.AsRef(in source));
-    }
+    => ref Unsafe.As<T?, NullableWrapper<T>>(ref Unsafe.AsRef(in source));
 
     /// <summary>
     /// Reinterprets the given reference to a <see cref="NullableWrapper{T}"/> value as a reference to a value of 
     /// <see cref="Nullable{T}"/> type.
     /// </summary>
     /// <typeparam name="T">The underlying value type.</typeparam>
-    /// <param name="source">The reference to <see cref="Nullable{T}"/> instance.</param>
+    /// <param name="source">The reference to <see cref="Nullable{T}"/> instance to reinterpret.</param>
     /// <returns>A reference to a value of <see cref="NullableWrapper{T}"/> type.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ref readonly NullableWrapper<T> AsNullableWrapperRef<T>(ref T? source)
+    public static ref readonly NullableWrapper<T> AsRefToNullableWrapper<T>(ref T? source)
         where T : struct
-    {
-        // The reason why this method is an extension and is not part of
-        // the NullableWrapper<T> type itself is that NullableWrapper<T> is
-        // really just a mask used over Nullable<T> structure, but it is never
-        // actually instantiated. Because of this, the method table of the
-        // objects in the heap will be the one of type T created by the runtime,
-        // and not the one of the Nullable<T> type. To avoid potential issues
-        // when invoking this method on different runtimes, which might handle
-        // that scenario differently, we use an extension method, which is just
-        // syntactic sugar for a static method belonging to another class. This
-        // isn't technically necessary, but it's just an extra precaution since
-        // the syntax for users remains exactly the same anyway. Here we just
-        // call the Unsafe.Unbox<T>(object) API, which is hidden away for users
-        // of the type for simplicity. Note that this API will always actually
-        // involve a conditional branch, which is introduced by the JIT compiler
-        // to validate the object instance being unboxed. But since the
-        // alternative of manually tracking the offset to the boxed data would be
-        // both more error prone, and it would still introduce some overhead,
-        // this doesn't really matter in this case anyway.
-        return ref Unsafe.As<T?, NullableWrapper<T>>(ref source);
-    }
+    => ref Unsafe.As<T?, NullableWrapper<T>>(ref source);
+}
+
+public static partial class SpanExtensions
+{
+#if NETSTANDARD2_1_OR_GREATER
+
+    public static Span<NullableWrapper<T>> WithNullableWrapper<T>(Span<T?> source)
+        where T : struct
+    => MemoryMarshal.CreateSpan(ref Unsafe.As<T?, NullableWrapper<T>>(ref MemoryMarshal.GetReference(source)), source.Length);
+
+    public static Span<T?> WithNullable<T>(Span<NullableWrapper<T>> source)
+        where T : struct
+    => MemoryMarshal.CreateSpan(ref Unsafe.As<NullableWrapper<T>, T?>(ref MemoryMarshal.GetReference(source)), source.Length);
+
+#endif
 }

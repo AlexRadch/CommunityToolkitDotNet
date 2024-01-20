@@ -13,7 +13,7 @@ namespace CommunityToolkit.HighPerformance;
 /// <summary>
 /// Helpers for working with the <see cref="Span{T}"/> type.
 /// </summary>
-public static class SpanExtensions
+public static partial class SpanExtensions
 {
     /// <summary>
     /// Returns a reference to the first element within a given <see cref="Span{T}"/>, with no bounds checks.
